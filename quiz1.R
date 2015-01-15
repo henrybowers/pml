@@ -49,7 +49,7 @@ qplot(CompressiveStrength,colour=cutVar,fill=cutVar,data=training)
 
 #Q3
 
-#ANSWER  = the log transform is not a monotone transformation of the data.
+#ANSWER  = there are a large number of values that are the same and even if you took log(SuperPlasticizer+1) the distribution would not be symmetric.
 
 library(AppliedPredictiveModeling)
 data(concrete)
@@ -59,7 +59,7 @@ inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
 training = mixtures[ inTrain,]
 testing = mixtures[-inTrain,]
 hist(training$Superplasticizer)
-hist(log(training$Superplasticizer))
+hist(log(training$Superplasticizer+1))
 mean(training$Superplasticizer)
 sd(training$Superplasticizer)
 summary(log(training$Superplasticizer))
