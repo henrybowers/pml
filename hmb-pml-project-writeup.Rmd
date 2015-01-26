@@ -1,0 +1,71 @@
+---
+title: "PML Project"
+author: "Henry Bowers"
+date: "Sunday, January 25, 2015"
+output: html_document
+---
+
+# Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+A recent study used accelerometers on the belt, forearm, arm, and dumbell of 6 participants. These participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information on the different ways and the measuremens are available from the study website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The goal of this project is to build a classifier based on the study's sensor data set.
+
+# Training Data
+
+As I received it, the training data set needed to be cleaned before it could be used. I removed the summary rows and variables, and time windows that had less than 9 sensor readings. I also removed information variables such as the name of the subject and time stamps.
+
+```
+#load source data
+trainRaw <- read.csv("../data/pml-training.csv",header = TRUE,)
+testRaw <- read.csv("../data/pml-testing.csv",header = TRUE)
+
+#clean data - remove summary rows, cols
+trainCleaned <- trainRaw[trainRaw$new_window=="no",]
+summaryColIndex <- grepl("var|avg|stddev|min|max|ampl|kurt|skew|new",names(trainCleaned))
+trainCleaned <- trainCleaned[,!summaryColIndex]
+
+windowCount<-as.data.frame(table(trainCleaned$num_window))
+windowCountIndex <- windowCount[windowCount$Freq>9,]
+trainCleaned <- trainCleaned[trainCleaned$num_window %in% windowCountIndex$Var1,]
+
+trainSummary <- trainCleaned[,8:59]
+```
+
+# Cross Validation
+
+I applied cross validation to the training data by randomly splitting the training data into a training set and a data set. This split is necessary to estimate OOB error for a decision tree. I also applied cross-validation during training by specifying 5 repeats of 10-fold CV.
+
+```
+#set up cross-validation sets - split training set into training and testing
+trainIndex <- createDataPartition(trainSummary$classe,p=0.75,list=FALSE)
+training <- trainSummary[trainIndex,]
+testing <- trainSummary[-trainIndex,]
+
+
+#set cross-validation method to use during training
+ctrl <- trainControl(method = "repeatedcv", repeats = 5)
+
+```
+
+# Training the classifier
+
+I built a decision tree using the training split, then plotted the resulting tree and ran the classifier against the testing split to estimate OOB error.
+
+```
+set.seed(1599)
+modfit <- train(classe ~ . ,method="rpart",data=training,trControl = ctrl)
+
+#examine model
+modfit$finalModel
+plot(modfit$finalModel, uniform=TRUE,main="Classification Tree", margin=0.2)
+text(modfit$finalModel, use.n=TRUE, all=TRUE, cex=.8)
+
+#predict on testing
+predResults<- predict(modfit,testing)
+confusionMatrix(predResults,testing$classe)
+```
+
+The overall accuracy of the classifier on the test split is 0.48.
